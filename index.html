@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WORDSOFT AI</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="logo">WORDSOFT AI</div>
+      <div class="status-indicator" id="status-indicator">Готов к общению</div>
+    </header>
+    <main class="chat-area" id="chat-area">
+      <div class="message message-model">
+        <div class="avatar">🤖</div>
+        <div class="bubble">
+          Привет! Я WORDSOFT AI. Задай вопрос или загрузи изображение, и я постараюсь помочь.
+        </div>
+      </div>
+    </main>
+    <footer class="composer">
+      <form id="composer-form">
+        <label for="image-input" class="image-upload" title="Загрузить изображение">
+          <input type="file" id="image-input" accept="image/*" hidden>
+          <span class="image-upload__icon">🖼️</span>
+        </label>
+        <textarea id="prompt-input" rows="1" placeholder="Напишите сообщение..." required></textarea>
+        <button type="submit" class="send-button" title="Отправить">➤</button>
+      </form>
+      <div class="composer-hint">WORDSOFT AI использует модель Gemini для обработки текста и изображений.</div>
+    </footer>
+  </div>
+  <template id="message-template">
+    <div class="message">
+      <div class="avatar"></div>
+      <div class="bubble"></div>
+    </div>
+  </template>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
