@@ -7,40 +7,128 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="app-header">
-      <div class="logo">WORDSOFT AI</div>
-      <div class="status-indicator" id="status-indicator">Готов к общению</div>
-    </header>
-    <main class="chat-area" id="chat-area">
-      <div class="message message-model">
-        <div class="avatar">🤖</div>
-        <div class="bubble">
-          Привет! Я WORDSOFT AI. Задай вопрос или загрузи изображение, и я постараюсь помочь.
-        </div>
+  <noscript class="no-js-warning">Для работы WORDSOFT AI требуется включённый JavaScript.</noscript>
+  <div class="app-container">
+    <aside class="intro-panel">
+      <div class="brand-card">
+        <span class="brand-badge">WORDSOFT AI</span>
+        <h1>Твой умный ассистент для идей, кода и творчества</h1>
+        <p>Общайся с ИИ, получай мгновенные ответы, анализируй изображения и вдохновляйся свежими подсказками.
+        </p>
+        <dl class="brand-highlights">
+          <div>
+            <dt>⚡ Мгновенно</dt>
+            <dd>Ответы без задержек, прямо в браузере.</dd>
+          </div>
+          <div>
+            <dt>🧠 Gemini 1.5 Flash</dt>
+            <dd>Текст + изображение в одном запросе.</dd>
+          </div>
+          <div>
+            <dt>🎨 Креативно</dt>
+            <dd>Набор подсказок для стартовых идей.</dd>
+          </div>
+        </dl>
       </div>
-    </main>
-    <footer class="composer">
-      <form id="composer-form">
-        <label for="image-input" class="image-upload" title="Загрузить изображение">
-          <input type="file" id="image-input" accept="image/*" hidden>
-          <span class="image-upload__icon">🖼️</span>
-        </label>
-        <textarea id="prompt-input" rows="1" placeholder="Напишите сообщение..." required></textarea>
-        <button type="submit" class="send-button" title="Отправить">➤</button>
-      </form>
-      <div class="composer-hint">WORDSOFT AI использует модель Gemini для обработки текста и изображений.</div>
-    </footer>
+
+      <section class="suggestions">
+        <header>
+          <h2>Попробуйте запросы</h2>
+          <p>Нажмите, чтобы заполнить поле ввода.</p>
+        </header>
+        <div class="suggestion-list">
+          <button type="button" class="suggestion" data-suggestion="Составь план продвижения стартапа в соцсетях на месяц">
+            <span>📈</span>
+            <div>
+              <strong>Маркетинговый план</strong>
+              <p>Идеи постов, сторис и рекламных кампаний.</p>
+            </div>
+          </button>
+          <button type="button" class="suggestion" data-suggestion="Проанализируй это резюме и предложи улучшения">
+            <span>📝</span>
+            <div>
+              <strong>Аудит резюме</strong>
+              <p>Проверьте структуру и ключевые навыки.</p>
+            </div>
+          </button>
+          <button type="button" class="suggestion" data-suggestion="Помоги придумать концепцию постера для музыкального фестиваля">
+            <span>🎶</span>
+            <div>
+              <strong>Дизайн постера</strong>
+              <p>Попросите идею визуала и цветовые сочетания.</p>
+            </div>
+          </button>
+          <button type="button" class="suggestion" data-suggestion="Придумай сюжет короткого рассказа в жанре научной фантастики">
+            <span>🚀</span>
+            <div>
+              <strong>Сюжет рассказа</strong>
+              <p>Получите завязку, героев и неожиданный поворот.</p>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <section class="info-cards">
+        <article>
+          <h3>Совместимость</h3>
+          <p>Интерфейс адаптирован под ПК, планшеты и смартфоны. Пользоваться удобно где угодно.</p>
+        </article>
+        <article>
+          <h3>Безопасность</h3>
+          <p>Храните ключи аккуратно и не публикуйте личные данные в открытом доступе.</p>
+        </article>
+      </section>
+    </aside>
+
+    <div class="chat-shell">
+      <header class="chat-header">
+        <div class="chat-title">
+          <h2>Диалог</h2>
+          <p>Задайте вопрос или загрузите изображение — WORDSOFT AI готов помочь.</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="icon-button" id="theme-toggle" aria-label="Переключить тему" aria-pressed="false">
+            <span class="icon">🌙</span>
+          </button>
+          <div class="status-indicator" id="status-indicator">В сети</div>
+        </div>
+      </header>
+
+      <main class="chat-area" id="chat-area"></main>
+
+      <footer class="composer">
+        <form id="composer-form" class="composer-form">
+          <label for="image-input" class="icon-button image-upload" title="Загрузить изображение">
+            <input type="file" id="image-input" accept="image/*" hidden>
+            <span class="icon">📎</span>
+          </label>
+          <textarea id="prompt-input" rows="1" placeholder="Напишите сообщение или вставьте подсказку..." required></textarea>
+          <div class="composer-controls">
+            <button type="button" class="icon-button" id="clear-input" title="Очистить поле" aria-label="Очистить поле">
+              <span class="icon">✕</span>
+            </button>
+            <button type="submit" class="send-button" id="send-button" title="Отправить">
+              <span class="label">Отправить</span>
+              <span class="icon">➤</span>
+            </button>
+          </div>
+        </form>
+        <div class="composer-attachments" id="composer-attachments" aria-live="polite"></div>
+        <div class="composer-hint">WORDSOFT AI использует модель Gemini 1.5 Flash для обработки текста и изображений.</div>
+      </footer>
+    </div>
   </div>
+
   <template id="message-template">
     <div class="message">
       <div class="avatar"></div>
       <div class="bubble"></div>
     </div>
   </template>
+
   <script src="app.js" type="module"></script>
 </body>
 </html>

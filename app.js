@@ -1,23 +1,54 @@
 const GEMINI_API_KEY = 'AIzaSyArd87o_wRn21M_SiAiTWtrNosgN_Jsq9o';
 const MODEL_NAME = 'gemini-1.5-flash';
 const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+const THEME_STORAGE_KEY = 'wordsoft-theme-preference';
+
+const INITIAL_GREETING = [
+  'Привет! Я WORDSOFT AI. Расскажи, чем могу помочь, или прикрепи изображение для анализа.',
+  'Для быстрого старта воспользуйся подсказками слева.'
+].join('\n\n');
 
 const chatArea = document.querySelector('#chat-area');
 const composerForm = document.querySelector('#composer-form');
 const promptInput = document.querySelector('#prompt-input');
 const imageInput = document.querySelector('#image-input');
 const statusIndicator = document.querySelector('#status-indicator');
+const themeToggle = document.querySelector('#theme-toggle');
+const suggestionButtons = document.querySelectorAll('[data-suggestion]');
+const clearInputButton = document.querySelector('#clear-input');
+const sendButton = document.querySelector('#send-button');
+const sendButtonIcon = sendButton?.querySelector('.icon');
+const composerAttachments = document.querySelector('#composer-attachments');
 
-const conversation = [
-  {
-    role: 'model',
-    parts: [
-      { text: 'Привет! Я WORDSOFT AI. Чем могу помочь?' }
-    ]
-  }
-];
-
+const conversation = [];
 let pendingImage = null;
+let pendingImagePreviewUrl = null;
+
+function fillBubbleWithContent(bubble, content) {
+  bubble.innerHTML = '';
+  if (!content || !content.trim()) {
+    return;
+  }
+
+  const paragraphs = content.split(/\n{2,}/).map(paragraph => paragraph.trim()).filter(Boolean);
+
+  if (paragraphs.length === 0) {
+    bubble.textContent = content.trim();
+    return;
+  }
+
+  paragraphs.forEach(paragraph => {
+    const p = document.createElement('p');
+    const lines = paragraph.split('\n');
+    lines.forEach((line, index) => {
+      p.appendChild(document.createTextNode(line));
+      if (index < lines.length - 1) {
+        p.appendChild(document.createElement('br'));
+      }
+    });
+    bubble.appendChild(p);
+  });
+}
 
 function createMessageElement(role, content, imageSrc) {
   const template = document.querySelector('#message-template');
@@ -33,12 +64,17 @@ function createMessageElement(role, content, imageSrc) {
     avatar.textContent = '🤖';
   }
 
-  bubble.textContent = content;
+  fillBubbleWithContent(bubble, content);
 
   if (imageSrc) {
     const img = document.createElement('img');
     img.src = imageSrc;
     img.alt = 'Загруженное изображение пользователя';
+    if (imageSrc.startsWith('blob:')) {
+      img.addEventListener('load', () => {
+        URL.revokeObjectURL(imageSrc);
+      }, { once: true });
+    }
     bubble.appendChild(img);
   }
 
@@ -52,11 +88,116 @@ function appendMessage(role, content, imageSrc) {
 }
 
 function setLoadingState(isLoading) {
-  const button = composerForm.querySelector('button');
-  button.disabled = isLoading;
+  if (sendButton) {
+    sendButton.disabled = isLoading;
+    sendButton.classList.toggle('is-loading', isLoading);
+    if (sendButtonIcon) {
+      sendButtonIcon.textContent = isLoading ? '⏳' : '➤';
+    }
+  }
   promptInput.disabled = isLoading;
   imageInput.disabled = isLoading;
-  statusIndicator.textContent = isLoading ? 'WORDSOFT AI думает…' : 'Готов к общению';
+  clearInputButton.disabled = isLoading;
+  suggestionButtons.forEach(button => {
+    button.disabled = isLoading;
+  });
+  statusIndicator.textContent = isLoading ? 'WORDSOFT AI думает…' : 'В сети';
+}
+
+function updateClearButtonState() {
+  const hasText = promptInput.value.trim().length > 0;
+  const hasAttachment = Boolean(pendingImage);
+  clearInputButton.classList.toggle('is-visible', hasText || hasAttachment);
+}
+
+function renderAttachments() {
+  composerAttachments.innerHTML = '';
+  if (!pendingImage || !pendingImagePreviewUrl) {
+    return;
+  }
+
+  const chip = document.createElement('div');
+  chip.className = 'attachment-chip';
+
+  const img = document.createElement('img');
+  img.src = pendingImagePreviewUrl;
+  img.alt = pendingImage.name || 'Изображение';
+
+  const label = document.createElement('span');
+  label.textContent = pendingImage.name || 'Изображение';
+
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'remove-attachment';
+  removeButton.setAttribute('aria-label', 'Удалить изображение');
+  removeButton.textContent = '✕';
+  removeButton.addEventListener('click', () => {
+    clearPendingImage();
+  });
+
+  chip.appendChild(img);
+  chip.appendChild(label);
+  chip.appendChild(removeButton);
+  composerAttachments.appendChild(chip);
+}
+
+function clearPendingImage(options = {}) {
+  const { preservePreviewUrl = false } = options;
+  if (pendingImagePreviewUrl && !preservePreviewUrl) {
+    URL.revokeObjectURL(pendingImagePreviewUrl);
+  }
+  pendingImage = null;
+  pendingImagePreviewUrl = null;
+  imageInput.value = '';
+  renderAttachments();
+  updateClearButtonState();
+}
+
+function applyTheme(theme, persist = true) {
+  const nextTheme = theme === 'light' ? 'light' : 'dark';
+  document.body.classList.toggle('light', nextTheme === 'light');
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-pressed', nextTheme === 'light' ? 'true' : 'false');
+    const icon = themeToggle.querySelector('.icon');
+    if (icon) {
+      icon.textContent = nextTheme === 'light' ? '🌞' : '🌙';
+    }
+  }
+  if (persist) {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch (error) {
+      console.warn('Не удалось сохранить тему', error);
+    }
+  }
+}
+
+function initializeTheme() {
+  let storedTheme = null;
+  try {
+    storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  } catch (error) {
+    storedTheme = null;
+  }
+
+  if (storedTheme !== 'light' && storedTheme !== 'dark') {
+    const prefersLightMedia = window.matchMedia('(prefers-color-scheme: light)');
+    applyTheme(prefersLightMedia.matches ? 'light' : 'dark', false);
+    prefersLightMedia.addEventListener('change', event => {
+      let savedTheme = null;
+      try {
+        savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      } catch (storageError) {
+        savedTheme = null;
+      }
+      if (!savedTheme) {
+        applyTheme(event.matches ? 'light' : 'dark', false);
+      }
+    });
+    return;
+  }
+
+  applyTheme(storedTheme);
 }
 
 async function fileToBase64(file) {
@@ -84,7 +225,7 @@ async function handleSubmit(event) {
     messageParts.push({ text });
   }
 
-  let imagePreview = null;
+  let imagePreviewForMessage = null;
   if (pendingImage) {
     messageParts.push({
       inlineData: {
@@ -92,7 +233,7 @@ async function handleSubmit(event) {
         data: await fileToBase64(pendingImage)
       }
     });
-    imagePreview = URL.createObjectURL(pendingImage);
+    imagePreviewForMessage = pendingImagePreviewUrl || URL.createObjectURL(pendingImage);
   }
 
   conversation.push({
@@ -100,11 +241,11 @@ async function handleSubmit(event) {
     parts: messageParts
   });
 
-  appendMessage('user', text || ' ', imagePreview);
+  appendMessage('user', text, imagePreviewForMessage);
   promptInput.value = '';
   promptInput.style.height = 'auto';
-  pendingImage = null;
-  imageInput.value = '';
+  clearPendingImage({ preservePreviewUrl: Boolean(imagePreviewForMessage) });
+  updateClearButtonState();
   setLoadingState(true);
 
   const loadingMessage = createMessageElement('model', '', null);
@@ -119,7 +260,7 @@ async function handleSubmit(event) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ contents: conversation.filter(entry => entry.role !== 'model' || entry.parts[0].text !== 'Привет! Я WORDSOFT AI. Чем могу помочь?') })
+      body: JSON.stringify({ contents: conversation })
     });
 
     if (!response.ok) {
@@ -144,34 +285,97 @@ async function handleSubmit(event) {
     appendMessage('model', textAnswer);
   } catch (error) {
     console.error(error);
+    if (conversation[conversation.length - 1]?.role === 'user') {
+      conversation.pop();
+    }
     loadingMessage.remove();
     appendMessage('model', 'Произошла ошибка при обращении к модели. Попробуйте ещё раз позже.');
   } finally {
     setLoadingState(false);
+    promptInput.focus();
   }
 }
 
-composerForm.addEventListener('submit', handleSubmit);
-
-promptInput.addEventListener('input', () => {
+function autoResizeInput() {
   promptInput.style.height = 'auto';
-  promptInput.style.height = `${promptInput.scrollHeight}px`;
-});
+  const maxHeight = 240;
+  const next = Math.min(promptInput.scrollHeight, maxHeight);
+  promptInput.style.height = `${next}px`;
+}
 
-imageInput.addEventListener('change', () => {
-  const file = imageInput.files?.[0];
-  if (!file) {
-    pendingImage = null;
+function handleSuggestionClick(event) {
+  const suggestion = event.currentTarget.getAttribute('data-suggestion');
+  if (!suggestion) {
     return;
   }
+  promptInput.value = suggestion;
+  autoResizeInput();
+  updateClearButtonState();
+  promptInput.focus();
+}
 
-  const maxSizeMB = 4;
-  if (file.size > maxSizeMB * 1024 * 1024) {
-    alert(`Размер файла превышает ${maxSizeMB} МБ. Пожалуйста, выберите изображение поменьше.`);
-    imageInput.value = '';
-    pendingImage = null;
-    return;
+function setupEventListeners() {
+  composerForm.addEventListener('submit', handleSubmit);
+
+  promptInput.addEventListener('input', () => {
+    autoResizeInput();
+    updateClearButtonState();
+  });
+
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files?.[0];
+    if (!file) {
+      clearPendingImage();
+      return;
+    }
+
+    const maxSizeMB = 4;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      alert(`Размер файла превышает ${maxSizeMB} МБ. Пожалуйста, выберите изображение поменьше.`);
+      clearPendingImage();
+      return;
+    }
+
+    if (pendingImagePreviewUrl) {
+      URL.revokeObjectURL(pendingImagePreviewUrl);
+    }
+
+    pendingImage = file;
+    pendingImagePreviewUrl = URL.createObjectURL(file);
+    renderAttachments();
+    updateClearButtonState();
+  });
+
+  clearInputButton.addEventListener('click', () => {
+    promptInput.value = '';
+    promptInput.dispatchEvent(new Event('input'));
+    clearPendingImage();
+    promptInput.focus();
+  });
+
+  suggestionButtons.forEach(button => {
+    button.addEventListener('click', handleSuggestionClick);
+  });
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = document.body.classList.contains('light') ? 'light' : 'dark';
+      applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+    });
   }
+}
 
-  pendingImage = file;
-});
+function init() {
+  appendMessage('model', INITIAL_GREETING);
+  initializeTheme();
+  autoResizeInput();
+  updateClearButtonState();
+  renderAttachments();
+  setupEventListeners();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
